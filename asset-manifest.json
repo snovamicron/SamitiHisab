@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/SamitiHisab/static/css/main.8d238ac3.css",
+    "main.js": "/SamitiHisab/static/js/main.b2bcaab2.js",
+    "static/js/213.1647bead.chunk.js": "/SamitiHisab/static/js/213.1647bead.chunk.js",
+    "static/js/455.2f2d9b39.chunk.js": "/SamitiHisab/static/js/455.2f2d9b39.chunk.js",
+    "index.html": "/SamitiHisab/index.html",
+    "main.8d238ac3.css.map": "/SamitiHisab/static/css/main.8d238ac3.css.map",
+    "main.b2bcaab2.js.map": "/SamitiHisab/static/js/main.b2bcaab2.js.map",
+    "213.1647bead.chunk.js.map": "/SamitiHisab/static/js/213.1647bead.chunk.js.map",
+    "455.2f2d9b39.chunk.js.map": "/SamitiHisab/static/js/455.2f2d9b39.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.8d238ac3.css",
+    "static/js/main.b2bcaab2.js"
+  ]
+}
