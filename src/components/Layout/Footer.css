@@ -1,0 +1,30 @@
+.footer {
+  background-color: var(--color-gray-800);
+  color: var(--color-gray-300);
+  padding: var(--spacing-xl) 0;
+  margin-top: auto;
+}
+
+.footer__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  text-align: center;
+}
+
+.footer__text {
+  font-size: var(--font-size-sm);
+}
+
+.footer__tagline {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+@media (min-width: 640px) {
+  .footer__inner {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}

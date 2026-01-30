@@ -1,0 +1,44 @@
+.loan-form {
+  width: 100%;
+}
+
+.loan-form__title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin-bottom: var(--spacing-xs);
+}
+
+.loan-form__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.loan-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.loan-form__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+@media (min-width: 480px) {
+  .loan-form__actions {
+    flex-direction: row;
+  }
+
+  .loan-form__actions .btn {
+    flex: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .loan-form__title {
+    font-size: var(--font-size-2xl);
+  }
+}
