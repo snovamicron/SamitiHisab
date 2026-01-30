@@ -2,6 +2,7 @@
   "name": "samiti-hisab",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://snovamicron.github.io/SamitiHisab",
   "description": "SamitiHisab is a simple and transparent loan repayment calculator built specifically for Mohila Samiti and women-led cooperative loan groups. SamitiHisab বিশেষভাবে মহিলাদের পরিচালিত সমিতি (Mohila Samiti) এবং কো-অপারেটিভ ঋণ গ্রুপের জন্য তৈরি একটি সহজ ও স্বচ্ছ ঋণ হিসাব করার অ্যাপ।",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
@@ -21,6 +22,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -41,5 +44,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
