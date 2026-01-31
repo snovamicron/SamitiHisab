@@ -1251,12 +1251,12 @@ This project is provided as-is for educational and professional use. No specific
 | Property         | Value                          |
 | ---------------- | ------------------------------ |
 | Application Name | SamitiHisab                    |
-| Version          | 1.0.0                          |
+| Version          | 1.1.0                          |
 | Framework        | React 18                       |
 | Build Tool       | Create React App               |
 | Primary Language | JavaScript (ES6+)              |
 | Styling          | Raw CSS with custom properties |
-| Last Updated     | January 2025                   |
+| Last Updated     | 31st January 2026              |
 
 ```
 

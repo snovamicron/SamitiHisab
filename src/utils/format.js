@@ -40,6 +40,119 @@ export function formatINR(num, showSymbol = true) {
 }
 
 /**
+ * Formats a raw integer string with Indian commas for input display
+ * e.g. "123456" -> "1,23,456"
+ * @param {string} val - Raw string of digits
+ * @returns {string}
+ */
+export function formatIndianInput(val) {
+  if (!val) return "";
+  const numStr = val.toString();
+  const lastThree = numStr.substring(numStr.length - 3);
+  const otherNumbers = numStr.substring(0, numStr.length - 3);
+  if (otherNumbers !== "") {
+    return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
+  }
+  return lastThree;
+}
+
+/**
+ * Converts a non-negative integer to words (Indian numbering system)
+ * e.g. 100000 -> "One Lakh"
+ * @param {number|string} num
+ * @returns {string}
+ */
+export function numberToWords(num) {
+  let n = parseInt(num, 10);
+  if (isNaN(n) || n < 0) return "";
+  if (n === 0) return "Zero";
+
+  const units = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+  ];
+  const teens = [
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+  const tens = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
+
+  function convertBelow1000(number) {
+    let str = "";
+    if (number >= 100) {
+      str += units[Math.floor(number / 100)] + " Hundred ";
+      number %= 100;
+    }
+    if (number >= 10 && number <= 19) {
+      str += teens[number - 10] + " ";
+    } else {
+      if (number >= 20) {
+        str += tens[Math.floor(number / 10)] + " ";
+        number %= 10;
+      }
+      if (number > 0) {
+        str += units[number] + " ";
+      }
+    }
+    return str.trim();
+  }
+
+  let result = "";
+
+  // Crores (1,00,00,000)
+  if (n >= 10000000) {
+    result += convertBelow1000(Math.floor(n / 10000000)) + " Crore ";
+    n %= 10000000;
+  }
+
+  // Lakhs (1,00,000)
+  if (n >= 100000) {
+    result += convertBelow1000(Math.floor(n / 100000)) + " Lakh ";
+    n %= 100000;
+  }
+
+  // Thousands (1,000)
+  if (n >= 1000) {
+    result += convertBelow1000(Math.floor(n / 1000)) + " Thousand ";
+    n %= 1000;
+  }
+
+  // Remaining (< 1000)
+  if (n > 0) {
+    result += convertBelow1000(n);
+  }
+
+  return result.trim();
+}
+
+/**
  * Rounds a number to 2 decimal places
  * @param {number} num - The number to round
  * @returns {number} - Rounded number

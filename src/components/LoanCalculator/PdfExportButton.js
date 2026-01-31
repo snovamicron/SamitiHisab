@@ -93,15 +93,24 @@ function PdfExportButton({ results, chartRef }) {
 
       const summaryData = [
         { label: "Borrower Name:", value: borrowerName },
-        { label: "Loan Amount:", value: formatINR(loanAmount) },
+        { label: "Loan Amount:", value: `Rs. ${formatINR(loanAmount, false)}` },
         {
           label: "Monthly Interest Rate:",
           value: `${formatPercent(monthlyInterestRate)}`,
         },
         { label: "Tenure:", value: `${months} months` },
-        { label: "Monthly Principal EMI:", value: formatINR(emiPrincipal) },
-        { label: "Total Interest:", value: formatINR(totalInterest) },
-        { label: "Total Payment:", value: formatINR(totalPayment) },
+        {
+          label: "Monthly Principal EMI:",
+          value: `Rs. ${formatINR(emiPrincipal, false)}`,
+        },
+        {
+          label: "Total Interest:",
+          value: `Rs. ${formatINR(totalInterest, false)}`,
+        },
+        {
+          label: "Total Payment:",
+          value: `Rs. ${formatINR(totalPayment, false)}`,
+        },
       ];
 
       pdf.setFontSize(10);
@@ -198,6 +207,22 @@ function PdfExportButton({ results, chartRef }) {
         row.isInitialRow ? "-" : formatINR(row.total, false),
       ]);
 
+      // Add totals row at the bottom with colSpan for "Total"
+      tableData.push([
+        {
+          content: "Total",
+          colSpan: 2,
+          styles: { halign: "center", fontStyle: "bold" },
+        },
+        "", // Placeholder for Loan Capital column
+        formatINR(loanAmount, false), // EMI column (showing Total Principal Paid)
+        formatINR(totalInterest, false), // Interest column
+        formatINR(totalPayment, false), // Total column
+      ]);
+
+      // Store the index of the totals row for styling
+      const totalsRowIndex = tableData.length - 1;
+
       // Generate table using autoTable
       pdf.autoTable({
         head: tableHeaders,
@@ -235,6 +260,12 @@ function PdfExportButton({ results, chartRef }) {
           if (data.section === "body" && data.row.index === 0) {
             data.cell.styles.fillColor = [219, 234, 254];
           }
+          // Style totals row (last row)
+          if (data.section === "body" && data.row.index === totalsRowIndex) {
+            data.cell.styles.fillColor = [241, 245, 249];
+            // Font style is already set in the data object, but good to ensure
+            data.cell.styles.fontStyle = "bold";
+          }
         },
       });
 
@@ -244,11 +275,18 @@ function PdfExportButton({ results, chartRef }) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setTextColor(...grayColor);
-        pdf.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, {
-          align: "center",
-        });
+
+        // Page Number aligned to Right Margin
         pdf.text(
-          "LoanCalc Pro - Professional Loan Premium Calculator",
+          `Page ${i} of ${pageCount}`,
+          pageWidth - margin,
+          pageHeight - 10,
+          { align: "right" },
+        );
+
+        // Tagline aligned to Left Margin
+        pdf.text(
+          "SamitiHisab - Simple & Transparent Loan Repayment Calculator",
           margin,
           pageHeight - 10,
         );

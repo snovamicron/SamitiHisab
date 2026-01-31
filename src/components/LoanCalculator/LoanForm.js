@@ -1,8 +1,17 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import Card from "../UI/Card";
 import Input from "../UI/Input";
 import Button from "../UI/Button";
-import { getTodayISO } from "../../utils/date";
+import {
+  getTodayISO,
+  isoToDigits,
+  digitsToISO,
+  buildDateDisplay,
+  validateDateDigits,
+  displayPosToDigitIndex,
+  digitIndexToDisplayPos,
+} from "../../utils/date";
+import { formatIndianInput, numberToWords } from "../../utils/format";
 import "./LoanForm.css";
 
 /**
@@ -39,6 +48,15 @@ function LoanForm({ onCalculate, onReset }) {
   const [errors, setErrors] = useState(initialErrorsState);
   const [touched, setTouched] = useState({});
 
+  // Local display states
+  const [displayLoanAmount, setDisplayLoanAmount] = useState("");
+  const [rawDateDigits, setRawDateDigits] = useState(
+    isoToDigits(initialFormState.startDate),
+  );
+
+  // Ref for the hidden date picker
+  const datePickerRef = useRef(null);
+
   /**
    * Validates a single field
    */
@@ -66,6 +84,9 @@ function LoanForm({ onCalculate, onReset }) {
       case "startDate":
         if (!value) {
           return "Start date is required";
+        }
+        if (isNaN(new Date(value).getTime())) {
+          return "Invalid date";
         }
         return "";
 
@@ -124,27 +145,178 @@ function LoanForm({ onCalculate, onReset }) {
   }, [formData, validateField]);
 
   /**
-   * Handle input change
+   * Updates formData.startDate based on current digits
+   */
+  const updateFormDataFromDigits = useCallback((digits) => {
+    if (digits.length === 8) {
+      const isoDate = digitsToISO(digits);
+      // Only set valid ISO date, otherwise set empty to invalidate
+      setFormData((prev) => ({ ...prev, startDate: isoDate || "" }));
+    } else {
+      // Incomplete date - set empty to invalidate
+      setFormData((prev) => ({ ...prev, startDate: "" }));
+    }
+  }, []);
+
+  /**
+   * Handle date input keydown for precise cursor control
+   */
+  const handleDateKeyDown = (e) => {
+    const inputElement = e.target;
+    const cursorPos = inputElement.selectionStart;
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const digitIndex = displayPosToDigitIndex(cursorPos);
+      const deleteAt = digitIndex - 1;
+
+      if (deleteAt >= 0 && deleteAt < rawDateDigits.length) {
+        const newDigits =
+          rawDateDigits.slice(0, deleteAt) + rawDateDigits.slice(deleteAt + 1);
+        setRawDateDigits(newDigits);
+        updateFormDataFromDigits(newDigits);
+
+        setTimeout(() => {
+          const newPos = digitIndexToDisplayPos(deleteAt);
+          inputElement.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
+    } else if (e.key === "Delete") {
+      e.preventDefault();
+      const digitIndex = displayPosToDigitIndex(cursorPos);
+
+      if (digitIndex >= 0 && digitIndex < rawDateDigits.length) {
+        const newDigits =
+          rawDateDigits.slice(0, digitIndex) +
+          rawDateDigits.slice(digitIndex + 1);
+        setRawDateDigits(newDigits);
+        updateFormDataFromDigits(newDigits);
+
+        setTimeout(() => {
+          const newPos = digitIndexToDisplayPos(digitIndex);
+          inputElement.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
+    } else if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      const digitIndex = displayPosToDigitIndex(cursorPos);
+
+      let newDigits;
+      let newCursorDigitIndex;
+
+      if (digitIndex < rawDateDigits.length) {
+        // Replace existing digit
+        newDigits =
+          rawDateDigits.slice(0, digitIndex) +
+          e.key +
+          rawDateDigits.slice(digitIndex + 1);
+        newCursorDigitIndex = digitIndex + 1;
+      } else if (rawDateDigits.length < 8) {
+        // Append new digit
+        newDigits = rawDateDigits + e.key;
+        newCursorDigitIndex = newDigits.length;
+      } else {
+        // Already full, do nothing
+        return;
+      }
+
+      setRawDateDigits(newDigits);
+      updateFormDataFromDigits(newDigits);
+
+      setTimeout(() => {
+        const newPos = digitIndexToDisplayPos(newCursorDigitIndex);
+        inputElement.setSelectionRange(newPos, newPos);
+      }, 0);
+    }
+    // Allow other keys (arrows, tab, etc.) to pass through naturally
+  };
+
+  /**
+   * Handle generic input change
    */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Validate on change if field was touched
-    if (touched[name]) {
-      const error = validateField(name, value);
-      setErrors((prev) => ({ ...prev, [name]: error }));
+    if (name === "loanAmount") {
+      const rawValue = value.replace(/,/g, "");
+      if (/[^0-9]/.test(rawValue) && rawValue !== "") return;
+      const formattedDisplay = formatIndianInput(rawValue);
+      setDisplayLoanAmount(formattedDisplay);
+      setFormData((prev) => ({ ...prev, [name]: rawValue }));
+      if (touched[name]) {
+        const error = validateField(name, rawValue);
+        setErrors((prev) => ({ ...prev, [name]: error }));
+      }
+    } else if (name === "startDate") {
+      // Fallback for mobile soft keyboard / paste
+      // Extract digits from whatever value was entered
+      const extractedDigits = value.replace(/\D/g, "").slice(0, 8);
+      setRawDateDigits(extractedDigits);
+      updateFormDataFromDigits(extractedDigits);
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      if (touched[name]) {
+        const error = validateField(name, value);
+        setErrors((prev) => ({ ...prev, [name]: error }));
+      }
     }
   };
 
   /**
-   * Handle input blur (mark as touched)
+   * Handle Date Input Focus - position cursor correctly
+   */
+  const handleDateFocus = (e) => {
+    // Allow natural cursor positioning - don't force to end
+  };
+
+  /**
+   * Handle Date Picker Change
+   */
+  const handleDatePickerChange = (e) => {
+    const isoDate = e.target.value;
+    if (isoDate) {
+      setFormData((prev) => ({ ...prev, startDate: isoDate }));
+      setRawDateDigits(isoToDigits(isoDate));
+      setErrors((prev) => ({ ...prev, startDate: "" }));
+    }
+  };
+
+  /**
+   * Handle input blur
    */
   const handleBlur = (e) => {
-    const { name, value } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    const error = validateField(name, value);
-    setErrors((prev) => ({ ...prev, [name]: error }));
+    const { name } = e.target;
+
+    if (name === "startDate") {
+      setTouched((prev) => ({ ...prev, [name]: true }));
+      // Do NOT auto-revert to last valid date
+      // Just validate and show error if invalid
+      if (touched[name] || rawDateDigits.length > 0) {
+        const validation = validateDateDigits(rawDateDigits);
+        if (
+          validation.status === "invalid" ||
+          validation.status === "inprogress"
+        ) {
+          setErrors((prev) => ({
+            ...prev,
+            startDate: "Valid date is required",
+          }));
+        } else if (validation.status === "empty") {
+          setErrors((prev) => ({
+            ...prev,
+            startDate: "Start date is required",
+          }));
+        } else {
+          setErrors((prev) => ({ ...prev, startDate: "" }));
+        }
+      }
+    } else {
+      const value =
+        name === "loanAmount" ? formData.loanAmount : e.target.value;
+      setTouched((prev) => ({ ...prev, [name]: true }));
+      const error = validateField(name, value);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   /**
@@ -152,8 +324,6 @@ function LoanForm({ onCalculate, onReset }) {
    */
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Mark all fields as touched
     const allTouched = Object.keys(formData).reduce((acc, key) => {
       acc[key] = true;
       return acc;
@@ -171,15 +341,94 @@ function LoanForm({ onCalculate, onReset }) {
     }
   };
 
-  /**
-   * Handle form reset
-   */
   const handleReset = () => {
     setFormData(initialFormState);
+    setDisplayLoanAmount("");
+    setRawDateDigits(isoToDigits(initialFormState.startDate));
     setErrors(initialErrorsState);
     setTouched({});
     if (onReset) onReset();
   };
+
+  const amountInWords = formData.loanAmount
+    ? numberToWords(formData.loanAmount)
+    : "";
+
+  const loanAmountLabel = (
+    <span>
+      Loan Amount (INR)
+      {amountInWords && (
+        <span
+          style={{
+            marginLeft: "0.5rem",
+            fontSize: "0.9em",
+            color: "#1e293b",
+            fontWeight: "600",
+          }}
+        >
+          — {amountInWords}
+        </span>
+      )}
+    </span>
+  );
+
+  // Live date validation status
+  const dateValidation = validateDateDigits(rawDateDigits);
+
+  let dateStatusDisplay = null;
+  if (dateValidation.status === "valid") {
+    dateStatusDisplay = (
+      <span
+        style={{
+          color: "#10b981",
+          fontWeight: "600",
+          marginLeft: "0.5rem",
+          fontSize: "0.9em",
+        }}
+      >
+        ✓ Valid Date
+      </span>
+    );
+  } else if (dateValidation.status === "invalid") {
+    dateStatusDisplay = (
+      <span
+        style={{
+          color: "#ef4444",
+          fontWeight: "600",
+          marginLeft: "0.5rem",
+          fontSize: "0.9em",
+        }}
+      >
+        ⚠ {dateValidation.message}
+      </span>
+    );
+  } else if (
+    dateValidation.status === "inprogress" &&
+    rawDateDigits.length > 0
+  ) {
+    dateStatusDisplay = (
+      <span
+        style={{
+          color: "#64748b",
+          fontWeight: "500",
+          marginLeft: "0.5rem",
+          fontSize: "0.9em",
+        }}
+      >
+        Typing...
+      </span>
+    );
+  }
+
+  const startDateLabel = (
+    <span>
+      Start Date
+      {dateStatusDisplay}
+    </span>
+  );
+
+  // Compute display value from raw digits
+  const dateDisplayValue = buildDateDisplay(rawDateDigits);
 
   return (
     <Card variant="elevated" padding="lg" className="loan-form">
@@ -204,29 +453,79 @@ function LoanForm({ onCalculate, onReset }) {
           />
 
           <Input
-            label="Loan Amount (INR)"
+            label={loanAmountLabel}
             name="loanAmount"
-            type="number"
-            value={formData.loanAmount}
+            type="text"
+            inputMode="numeric"
+            value={displayLoanAmount}
             onChange={handleChange}
             onBlur={handleBlur}
             error={touched.loanAmount ? errors.loanAmount : ""}
-            placeholder="e.g., 100000"
-            min="0"
-            step="any"
+            placeholder="e.g., 1,00,000"
             required
           />
 
-          <Input
-            label="Start Date"
-            name="startDate"
-            type="date"
-            value={formData.startDate}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={touched.startDate ? errors.startDate : ""}
-            required
-          />
+          <div style={{ position: "relative" }}>
+            <Input
+              label={startDateLabel}
+              name="startDate"
+              type="text"
+              inputMode="numeric"
+              value={dateDisplayValue}
+              onChange={handleChange}
+              onKeyDown={handleDateKeyDown}
+              onFocus={handleDateFocus}
+              onBlur={handleBlur}
+              error={touched.startDate ? errors.startDate : ""}
+              placeholder="dd/mm/yyyy"
+              required
+            />
+
+            {/* Calendar Button */}
+            <button
+              type="button"
+              onClick={() =>
+                datePickerRef.current && datePickerRef.current.showPicker()
+              }
+              style={{
+                position: "absolute",
+                right: "12px",
+                top: "36px",
+                background: "transparent",
+                border: "none",
+                fontSize: "1.2rem",
+                cursor: "pointer",
+                padding: "4px",
+                zIndex: 2,
+                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              title="Open calendar"
+              tabIndex="-1"
+            >
+              📅
+            </button>
+
+            <input
+              type="date"
+              ref={datePickerRef}
+              value={formData.startDate}
+              onChange={handleDatePickerChange}
+              style={{
+                position: "absolute",
+                top: "36px",
+                right: "10px",
+                width: "40px",
+                height: "40px",
+                opacity: 0,
+                cursor: "pointer",
+                zIndex: 1,
+              }}
+              tabIndex="-1"
+            />
+          </div>
 
           <Input
             label="Monthly Interest Rate (%)"
