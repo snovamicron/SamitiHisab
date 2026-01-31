@@ -19,7 +19,7 @@ function Navbar() {
           <Link to="/" className="navbar__logo">
             <img
               className="navbar__logo-icon"
-              src="/logo.png"
+              src={`${process.env.PUBLIC_URL}/logo.png`}
               alt="SamitiHisab"
             />
             <span className="navbar__logo-text">SamitiHisab</span>
