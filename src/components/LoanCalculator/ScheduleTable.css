@@ -1,6 +1,5 @@
 .schedule-table {
   width: 100%;
-  /* FIX: Critical - prevent table from expanding parent */
   max-width: 100%;
   overflow: hidden;
 }
@@ -42,11 +41,9 @@
 }
 
 .schedule-table__wrapper {
-  /* FIX: Critical - contain table scroll within this wrapper */
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
-  /* Add scrollbar styling for better UX */
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-300) var(--color-gray-100);
 }
@@ -64,11 +61,24 @@
   border-radius: 4px;
 }
 
+/* Desktop table defaults */
 .schedule-table__table {
   width: 100%;
-  min-width: 500px; /* Reduced from 600px */
+  min-width: 500px;
   border-collapse: collapse;
-  table-layout: fixed; /* FIX: Fixed table layout for consistent columns */
+  table-layout: fixed;
+}
+
+/* Mobile table - no horizontal scroll */
+@media (max-width: 639px) {
+  .schedule-table__wrapper {
+    overflow-x: visible;
+  }
+
+  .schedule-table__table {
+    min-width: 100%;
+    table-layout: auto;
+  }
 }
 
 .schedule-table__th,
@@ -82,6 +92,14 @@
   .schedule-table__th,
   .schedule-table__td {
     padding: var(--spacing-md);
+  }
+}
+
+/* Mobile: tighter padding */
+@media (max-width: 639px) {
+  .schedule-table__th,
+  .schedule-table__td {
+    padding: 6px 4px;
   }
 }
 
@@ -101,10 +119,24 @@
 .schedule-table__td {
   font-size: var(--font-size-xs);
   color: var(--color-gray-700);
-  /* FIX: Prevent text from forcing column width */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Mobile: no truncation, allow wrapping */
+@media (max-width: 639px) {
+  .schedule-table__td {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: normal;
+  }
+
+  .schedule-table__th {
+    white-space: normal;
+    font-size: 10px;
+  }
 }
 
 @media (min-width: 640px) {
@@ -120,6 +152,13 @@
 .schedule-table__td--money {
   font-family: "SF Mono", "Monaco", "Consolas", monospace;
   font-size: var(--font-size-xs);
+}
+
+/* Mobile: smaller money font */
+@media (max-width: 639px) {
+  .schedule-table__td--money {
+    font-size: 10px;
+  }
 }
 
 .schedule-table__td--total {
@@ -139,13 +178,31 @@
   background-color: var(--color-primary-light);
 }
 
+/* Serial number column (#) - narrow width */
+.schedule-table__th--serial,
+.schedule-table__td--serial {
+  width: 36px;
+  min-width: 36px;
+  max-width: 48px;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .schedule-table__th--serial,
+  .schedule-table__td--serial {
+    width: 24px;
+    min-width: 24px;
+    max-width: 28px;
+  }
+}
+
+/* Sticky column - desktop only */
 .schedule-table__th--sticky,
 .schedule-table__td--sticky {
   position: sticky;
   left: 0;
   background-color: var(--color-white);
   z-index: 1;
-  /* FIX: Add shadow to indicate scroll */
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -157,11 +214,41 @@
   background-color: var(--color-primary-light);
 }
 
+/* Mobile: remove sticky behavior to save space */
+@media (max-width: 639px) {
+  .schedule-table__th--sticky,
+  .schedule-table__td--sticky {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+/* Date column */
+.schedule-table__th--date,
+.schedule-table__td--date {
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .schedule-table__td--date {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+}
+
+/* Footer with show more/less buttons */
 .schedule-table__footer {
   display: flex;
   justify-content: center;
   padding: var(--spacing-md);
   border-top: 1px solid var(--color-gray-100);
+}
+
+/* Hide footer on mobile - all rows shown directly */
+@media (max-width: 639px) {
+  .schedule-table__footer {
+    display: none;
+  }
 }
 
 .schedule-table__show-more {
@@ -181,19 +268,27 @@
   color: var(--color-white);
 }
 
-/* Mobile scroll hint */
+/* Scroll hint - hidden on mobile (no horizontal scroll) */
 .schedule-table__scroll-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
-  background-color: var(--color-gray-50);
-  border-bottom: 1px solid var(--color-gray-200);
+  display: none;
 }
 
+/* Show scroll hint only on tablet/desktop if needed */
+@media (min-width: 640px) {
+  .schedule-table__scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+}
+
+/* Actually hide on desktop too since table fits - uncomment below if scroll hint needed on desktop */
 @media (min-width: 640px) {
   .schedule-table__scroll-hint {
     display: none;

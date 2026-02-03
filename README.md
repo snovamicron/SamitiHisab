@@ -1,4 +1,3 @@
-```markdown
 # SamitiHisab
 
 A simple and transparent loan repayment calculator built specifically for Mohila Samiti and women-led cooperative loan groups.
@@ -24,10 +23,11 @@ SamitiHisab বিশেষভাবে মহিলাদের পরিচা
 13. [Accessibility & UX Principles](#13-accessibility--ux-principles)
 14. [Local Setup & Installation](#14-local-setup--installation)
 15. [Environment & Configuration](#15-environment--configuration)
-16. [Future Enhancements & Roadmap](#16-future-enhancements--roadmap)
-17. [Contribution Guidelines](#17-contribution-guidelines)
-18. [Known Limitations](#18-known-limitations)
-19. [License & Usage Notes](#19-license--usage-notes)
+16. [Testing](#16-testing)
+17. [Future Enhancements & Roadmap](#17-future-enhancements--roadmap)
+18. [Contribution Guidelines](#18-contribution-guidelines)
+19. [Known Limitations](#19-known-limitations)
+20. [License & Usage Notes](#20-license--usage-notes)
 
 ---
 
@@ -71,8 +71,9 @@ Users can export all results to a professionally formatted PDF document.
 
 - Equal principal EMI calculation (principal divided equally across tenure)
 - Monthly interest computed on opening principal balance
-- Automatic rounding to two decimal places
-- Final month adjustment to ensure principal closes exactly to zero
+- Whole-rupee rounding: both EMI (principal) and interest are rounded UP to the nearest whole rupee (ceiling)
+- Integer-safe arithmetic to avoid floating-point precision errors in interest calculation
+- Final month EMI adjustment to ensure principal closes exactly to zero and total principal repaid equals original loan amount
 - Support for any loan amount, interest rate, and tenure
 
 ### Schedule Table
@@ -80,8 +81,8 @@ Users can export all results to a professionally formatted PDF document.
 - Row 0 displays initial disbursement state
 - Rows 1 through N show monthly repayment details
 - Columns: Date, Loan Capital (closing principal), EMI, Interest, Total
-- Horizontal scrolling on mobile with sticky first column
-- Expandable view for schedules exceeding 12 rows
+- **Desktop/Tablet**: Horizontal scrolling with sticky first column; expandable view for schedules exceeding 12 rows (click "Show all rows" to expand)
+- **Mobile**: Full table visible without horizontal scrolling; all rows displayed directly without needing to expand; no text truncation or ellipses; compact column widths and font sizes optimized for small screens
 
 ### Charts
 
@@ -107,7 +108,7 @@ Users can export all results to a professionally formatted PDF document.
 - Loading state during calculation
 - Scroll-to-results on mobile after calculation
 - Empty state guidance when no results exist
-- Scroll hint for mobile table users
+- Scroll hint for table users on tablet/desktop when horizontal scroll is available
 
 ---
 
@@ -161,7 +162,7 @@ Users can export all results to a professionally formatted PDF document.
 6. Loading indicator appears briefly
 7. Results section populates with summary, chart, and table
 8. On mobile, page scrolls to results automatically
-9. User reviews data, optionally expands table to see all rows
+9. User reviews data; on desktop/tablet, user can optionally expand table to see all rows if tenure exceeds 12 months; on mobile, all rows are visible directly without expansion
 10. User clicks "Download PDF" to export results
 11. PDF downloads with complete documentation
 12. User can click "Reset" to clear form and start over
@@ -186,6 +187,7 @@ This section documents the exact calculation methodology implemented in `src/uti
 ### EMI Definition (Equal Principal)
 
 This application uses an **equal principal repayment** structure, not a flat EMI structure.
+
 ```
 
 EMI Principal = Loan Amount / Number of Months
@@ -211,6 +213,7 @@ As the principal decreases, so does the interest charge.
 ### Month-by-Month Flow
 
 **Row 0 (Disbursement)**:
+
 - Date = Start Date
 - Closing Principal = Loan Amount
 - EMI = 0
@@ -224,20 +227,65 @@ For each month `i` from 1 to N:
 ```
 
 1. Opening Principal = Previous Closing Principal
-2. Interest = Opening Principal \* (Rate / 100)
+2. Interest = ceil(Opening Principal \* (Rate / 100)) [rounded UP to whole rupee]
 3. If i < N:
-   EMI Principal = Loan Amount / N (rounded to 2 decimals)
+   EMI Principal = ceil(Loan Amount / N) [rounded UP to whole rupee]
    If i = N:
    EMI Principal = Opening Principal (to close balance exactly)
 4. Closing Principal = Opening Principal - EMI Principal
 5. Total = EMI Principal + Interest
 6. Date = Start Date + i months
 
-````
+```
 
-### Worked Example
+### Worked Example (Whole-Rupee Rounding)
 
 **Inputs**:
+
+- Loan Amount: 100,000 INR
+- Monthly Interest Rate: 1.1%
+- Tenure: 12 months
+- Start Date: 01 Jan 2025
+
+**Calculations**:
+
+Base EMI Principal = ceil(100,000 / 12) = ceil(8,333.33) = 8,334
+
+| Month | Date        | Opening  | Interest (1.1%) | EMI   | Closing  | Total |
+| ----- | ----------- | -------- | --------------- | ----- | -------- | ----- |
+| 0     | 01 Jan 2025 | 1,00,000 | 0               | 0     | 1,00,000 | 0     |
+| 1     | 01 Feb 2025 | 1,00,000 | 1,100           | 8,334 | 91,666   | 9,434 |
+| 2     | 01 Mar 2025 | 91,666   | 1,009           | 8,334 | 83,332   | 9,343 |
+| 3     | 01 Apr 2025 | 83,332   | 917             | 8,334 | 74,998   | 9,251 |
+| 4     | 01 May 2025 | 74,998   | 825             | 8,334 | 66,664   | 9,159 |
+| 5     | 01 Jun 2025 | 66,664   | 734             | 8,334 | 58,330   | 9,068 |
+| 6     | 01 Jul 2025 | 58,330   | 642             | 8,334 | 49,996   | 8,976 |
+| 7     | 01 Aug 2025 | 49,996   | 550             | 8,334 | 41,662   | 8,884 |
+| 8     | 01 Sep 2025 | 41,662   | 459             | 8,334 | 33,328   | 8,793 |
+| 9     | 01 Oct 2025 | 33,328   | 367             | 8,334 | 24,994   | 8,701 |
+| 10    | 01 Nov 2025 | 24,994   | 275             | 8,334 | 16,660   | 8,609 |
+| 11    | 01 Dec 2025 | 16,660   | 184             | 8,334 | 8,326    | 8,518 |
+| 12    | 01 Jan 2026 | 8,326    | 92              | 8,326 | 0        | 8,418 |
+
+**Key observations**:
+
+- Months 1–11 use base EMI of ₹8,334 (ceiling of 8,333.33)
+- Month 12 EMI is ₹8,326 (remaining principal), absorbing the cumulative excess from ceiling
+- All EMI and interest values are whole rupees (no paise)
+- Total principal repaid = 8,334 × 11 + 8,326 = 1,00,000 ✓
+- Final closing principal = 0 ✓
+
+**Totals**:
+
+- Total Interest Paid: 7,154
+- Total Amount Paid: 1,07,154
+
+### Legacy Example (Two-Decimal Rounding)
+
+For reference, the following example shows the previous behavior with two-decimal precision. This is retained for historical comparison but is no longer how the application calculates values.
+
+**Inputs**:
+
 - Loan Amount: 100,000 INR
 - Monthly Interest Rate: 1%
 - Tenure: 10 months
@@ -247,35 +295,81 @@ For each month `i` from 1 to N:
 
 Base EMI Principal = 100,000 / 10 = 10,000.00
 
-| Month | Date | Opening | Interest (1%) | EMI | Closing | Total |
-|-------|------|---------|---------------|-----|---------|-------|
-| 0 | 01 Jan 2025 | 100,000.00 | 0.00 | 0.00 | 100,000.00 | 0.00 |
-| 1 | 01 Feb 2025 | 100,000.00 | 1,000.00 | 10,000.00 | 90,000.00 | 11,000.00 |
-| 2 | 01 Mar 2025 | 90,000.00 | 900.00 | 10,000.00 | 80,000.00 | 10,900.00 |
-| 3 | 01 Apr 2025 | 80,000.00 | 800.00 | 10,000.00 | 70,000.00 | 10,800.00 |
-| 4 | 01 May 2025 | 70,000.00 | 700.00 | 10,000.00 | 60,000.00 | 10,700.00 |
-| 5 | 01 Jun 2025 | 60,000.00 | 600.00 | 10,000.00 | 50,000.00 | 10,600.00 |
-| 6 | 01 Jul 2025 | 50,000.00 | 500.00 | 10,000.00 | 40,000.00 | 10,500.00 |
-| 7 | 01 Aug 2025 | 40,000.00 | 400.00 | 10,000.00 | 30,000.00 | 10,400.00 |
-| 8 | 01 Sep 2025 | 30,000.00 | 300.00 | 10,000.00 | 20,000.00 | 10,300.00 |
-| 9 | 01 Oct 2025 | 20,000.00 | 200.00 | 10,000.00 | 10,000.00 | 10,200.00 |
-| 10 | 01 Nov 2025 | 10,000.00 | 100.00 | 10,000.00 | 0.00 | 10,100.00 |
+| Month | Date        | Opening    | Interest (1%) | EMI       | Closing    | Total     |
+| ----- | ----------- | ---------- | ------------- | --------- | ---------- | --------- |
+| 0     | 01 Jan 2025 | 100,000.00 | 0.00          | 0.00      | 100,000.00 | 0.00      |
+| 1     | 01 Feb 2025 | 100,000.00 | 1,000.00      | 10,000.00 | 90,000.00  | 11,000.00 |
+| 2     | 01 Mar 2025 | 90,000.00  | 900.00        | 10,000.00 | 80,000.00  | 10,900.00 |
+| 3     | 01 Apr 2025 | 80,000.00  | 800.00        | 10,000.00 | 70,000.00  | 10,800.00 |
+| 4     | 01 May 2025 | 70,000.00  | 700.00        | 10,000.00 | 60,000.00  | 10,700.00 |
+| 5     | 01 Jun 2025 | 60,000.00  | 600.00        | 10,000.00 | 50,000.00  | 10,600.00 |
+| 6     | 01 Jul 2025 | 50,000.00  | 500.00        | 10,000.00 | 40,000.00  | 10,500.00 |
+| 7     | 01 Aug 2025 | 40,000.00  | 400.00        | 10,000.00 | 30,000.00  | 10,400.00 |
+| 8     | 01 Sep 2025 | 30,000.00  | 300.00        | 10,000.00 | 20,000.00  | 10,300.00 |
+| 9     | 01 Oct 2025 | 20,000.00  | 200.00        | 10,000.00 | 10,000.00  | 10,200.00 |
+| 10    | 01 Nov 2025 | 10,000.00  | 100.00        | 10,000.00 | 0.00       | 10,100.00 |
 
 **Totals**:
+
 - Total Interest Paid: 5,500.00
 - Total Amount Paid: 105,500.00
 
 ### Rounding and Last-Month Adjustment
 
-All monetary values are rounded to 2 decimal places using:
+#### Current Behavior: Whole-Rupee Ceiling with Integer-Safe Arithmetic
+
+All EMI (principal) and interest values are rounded **UP to the nearest whole rupee** (ceiling). This produces round figures without paise, which is the expected format for Mohila Samiti and cooperative loan groups.
+
+**EMI Rounding**:
 
 ```javascript
-Math.round((value + Number.EPSILON) * 100) / 100
-````
+// Integer ceiling division to avoid floating-point errors
+function ceilDiv(a, b) {
+  return Math.floor((a + b - 1) / b);
+}
 
-The `Number.EPSILON` addition prevents floating-point errors.
+baseEmiPrincipal = ceilDiv(principal, N);
+```
 
-On the final month, instead of using the calculated EMI principal, the system uses the exact opening principal. This ensures the closing principal is precisely zero, avoiding residual balances from accumulated rounding differences.
+**Interest Rounding**:
+
+Interest is computed using integer-safe ceiling division to prevent floating-point precision errors. For example, `90000 × 0.011 = 990` exactly, but due to IEEE 754 floating-point representation, JavaScript may compute this as `990.0000000001`, causing `Math.ceil()` to incorrectly return `991`.
+
+To avoid this, interest is calculated as:
+
+```javascript
+// Scale rate to integer: 1.1% becomes 1100 (per 100,000)
+rateScaled = Math.round(monthlyRatePercent * 1000);
+
+// Integer ceiling division
+interest = ceilDiv(capitalRupees * rateScaled, 100000);
+```
+
+This approach:
+
+- Preserves up to 3 decimal places in the interest rate (e.g., 1.125%)
+- Guarantees deterministic results without floating-point drift
+- Ensures that exact values (like 990.00) are not rounded up to 991
+
+**Last-Month Adjustment**:
+
+On the final month, instead of using the calculated base EMI principal, the system uses the exact remaining opening principal. This ensures:
+
+1. The closing principal is precisely zero
+2. The total principal repaid equals the original loan amount exactly
+3. Any cumulative excess from ceiling rounding across months 1 to N-1 is absorbed by a reduced final EMI
+
+Only the last month's EMI (principal portion) is adjusted. Interest in the final month is still calculated normally (ceiling of opening principal × rate) with no special adjustment.
+
+#### Historical Reference: Two-Decimal Rounding
+
+Previously, monetary values were rounded to 2 decimal places using:
+
+```javascript
+Math.round((value + Number.EPSILON) * 100) / 100;
+```
+
+The `Number.EPSILON` addition was used to prevent floating-point errors. This approach has been replaced with whole-rupee ceiling rounding as described above.
 
 ---
 
@@ -325,6 +419,7 @@ src/
 │       └── PdfExportButton.css
 └── utils/
     ├── loanSchedule.js         # Core calculation logic
+    ├── loanSchedule.test.js    # Unit tests for calculation logic
     ├── date.js                 # Date manipulation helpers
     └── format.js               # Number/currency formatting
 ```
@@ -441,10 +536,8 @@ src/
 - **Props**: `scheduleRows` (array)
 - **Purpose**: Displays full amortization schedule
 - **Features**:
-  - Show/hide rows beyond 12
-  - Horizontal scroll on mobile
-  - Sticky first column
-  - Scroll hint for mobile users
+  - **Desktop/Tablet (≥640px)**: Show/hide rows beyond 12; horizontal scroll with sticky first column; scroll hint displayed
+  - **Mobile (<640px)**: All rows visible directly (no expand/collapse); no horizontal scrolling; no text truncation; compact font sizes and padding; currency symbol hidden to save space
 
 #### PdfExportButton
 
@@ -492,6 +585,19 @@ ResultsSummary   ScheduleChart           ScheduleTable
 
 **Location**: `src/utils/loanSchedule.js`
 
+**Internal Helper Functions** (not exported):
+
+```javascript
+ceilDiv(a, b);
+// Integer ceiling division: returns ceil(a / b) using only integer operations
+// Avoids floating-point precision issues with Math.ceil(a / b)
+
+calculateInterestCeil(capitalRupees, monthlyRatePercent);
+// Calculates interest using integer-safe arithmetic
+// Returns interest rounded UP to whole rupees
+// Preserves up to 3 decimal places in the interest rate
+```
+
 **Exports**:
 
 ```javascript
@@ -515,24 +621,24 @@ Returns:
       dateLabel: String,    // "DD MMM YYYY"
       openingPrincipal: Number,
       closingPrincipal: Number,
-      emi: Number,
-      interest: Number,
-      total: Number,
+      emi: Number,          // Whole rupees (integer)
+      interest: Number,     // Whole rupees (integer)
+      total: Number,        // Whole rupees (integer)
       isInitialRow: Boolean
     },
     // ...
   ],
-  emiPrincipal: Number,
+  emiPrincipal: Number,     // Base EMI (ceiling), whole rupees
   borrowerName: String,
-  loanAmount: Number,
+  loanAmount: Number,       // Rounded to nearest integer
   monthlyInterestRate: Number,
   months: Number
 }
 ```
 
 ```javascript
-calculateTotalInterest(scheduleRows); // Returns sum of all interest
-calculateTotalPayment(scheduleRows); // Returns sum of all totals
+calculateTotalInterest(scheduleRows); // Returns sum of all interest (integer)
+calculateTotalPayment(scheduleRows); // Returns sum of all totals (integer)
 ```
 
 ### date.js
@@ -568,6 +674,8 @@ formatINR(number, (showSymbol = true));
 
 roundToTwo(number);
 // Rounds to 2 decimal places with EPSILON correction
+// Note: This function is retained for backward compatibility but is no longer
+// used by the loan schedule calculation, which now uses whole-rupee ceiling.
 
 parseNumber(string);
 // Parses string to number, removing commas and currency symbols
@@ -599,6 +707,7 @@ This application uses **local component state** exclusively. There is no global 
 | Calculation results | DashboardPage   | `useState` |
 | Loading indicator   | DashboardPage   | `useState` |
 | Table expansion     | ScheduleTable   | `useState` |
+| Mobile detection    | ScheduleTable   | `useState` |
 | PDF export loading  | PdfExportButton | `useState` |
 
 ### How Form Data Flows
@@ -743,7 +852,8 @@ Key responsive behaviors:
 - Single column to multi-column grid transitions
 - Font size scaling
 - Padding adjustments
-- Table horizontal scrolling with sticky column
+- **Schedule table on mobile**: Full table width without horizontal scroll; all rows visible; compact styling
+- **Schedule table on tablet/desktop**: Horizontal scrolling with sticky column when content overflows
 - Chart height adjustments
 
 ### Why Raw CSS
@@ -854,12 +964,12 @@ data = scheduleRows.map((row) => row.total);
 │ Loan Summary                        │
 │ ┌─────────────────────────────────┐ │
 │ │ Borrower: Name                  │ │
-│ │ Loan Amount: ₹X,XX,XXX.XX       │ │
+│ │ Loan Amount: ₹X,XX,XXX          │ │
 │ │ Interest Rate: X.XX%            │ │
 │ │ Tenure: X months                │ │
-│ │ Monthly EMI: ₹X,XXX.XX          │ │
-│ │ Total Interest: ₹X,XXX.XX       │ │
-│ │ Total Payment: ₹X,XX,XXX.XX     │ │
+│ │ Monthly EMI: ₹X,XXX             │ │
+│ │ Total Interest: ₹X,XXX          │ │
+│ │ Total Payment: ₹X,XX,XXX        │ │
 │ └─────────────────────────────────┘ │
 ├─────────────────────────────────────┤
 │ Repayment Trend Chart               │
@@ -930,8 +1040,9 @@ const validateField = (name, value) => {
 
 - All numeric inputs parsed with `parseFloat`/`parseInt`
 - NaN checks before calculations
-- Rounding applied consistently via `roundToTwo`
-- Final month uses remaining principal to prevent floating-point accumulation
+- Principal input rounded to nearest integer before calculation
+- Whole-rupee ceiling applied consistently for EMI and interest via integer-safe arithmetic
+- Final month uses remaining principal to prevent any residual balance
 - Empty form fields default to safe values
 
 ---
@@ -959,19 +1070,20 @@ const validateField = (name, value) => {
 ### Mobile Responsiveness
 
 - Touch-friendly button sizes (minimum 44px tap targets)
-- Horizontal scroll for table with visual hint
-- Sticky column for table context
-- Collapsible table rows to reduce scrolling
-- Appropriately sized fonts (never below 12px)
+- **Schedule table on mobile**: Full table fits screen width without horizontal scrolling; all rows displayed directly without expand/collapse buttons; no text truncation or ellipses; compact font sizes (10px) and reduced padding
+- **Schedule table on tablet/desktop**: Horizontal scroll available if content overflows; sticky first column for context; collapsible rows for long tenures
+- Scroll hint shown only on tablet/desktop when horizontal scroll exists
+- Appropriately sized fonts (never below 10px on mobile, 12px on desktop)
 - Adequate spacing between interactive elements
 
 ### Readability and Clarity
 
 - Indian number format (1,00,000) for INR familiarity
-- Consistent 2-decimal precision for money
+- Whole-rupee values displayed (no paise) for EMI and interest in schedule table
 - Date format familiar to Indian users (DD MMM YYYY)
 - Color coding for highlighted summary items
 - Monospace font for numeric columns
+- Currency symbol (₹) hidden on mobile schedule table to save horizontal space
 
 ---
 
@@ -1069,7 +1181,82 @@ If a backend is added in the future:
 
 ---
 
-## 16. Future Enhancements & Roadmap
+## 16. Testing
+
+### Test Framework
+
+The application uses **Jest** as the test runner, which is included by default with Create React App.
+
+### Test Files
+
+| File                             | Purpose                                        |
+| -------------------------------- | ---------------------------------------------- |
+| `src/utils/loanSchedule.test.js` | Unit tests for loan schedule calculation logic |
+
+### Running Tests
+
+```bash
+# Run all tests in watch mode (interactive)
+npm test
+
+# Run tests once and exit (CI mode)
+npm test -- --watchAll=false
+
+# Run tests with coverage report
+npm test -- --coverage
+```
+
+### What Is Tested
+
+The `loanSchedule.test.js` file covers:
+
+1. **Ceiling rounding behavior**
+   - Base EMI is ceiling of principal/months
+   - All EMI and interest values are whole rupees (integers)
+   - Months 1 to N-1 use base EMI; last month absorbs excess
+
+2. **Floating-point precision fixes**
+   - Capital ₹90,000 at 1.1% yields interest exactly ₹990 (not ₹991)
+   - Capital ₹100,000 at 1% yields interest exactly ₹1,000 (not ₹1,001)
+   - Rates with decimals (1.15%, 1.125%) work correctly
+
+3. **Various tenure lengths**
+   - Final closing principal is exactly zero for 6, 12, 24, 36, 48, 60 months
+   - Total EMI equals original principal for all tenures
+   - All values are integers for all tenures
+   - Last EMI is always ≤ base EMI
+
+4. **Principal input handling**
+   - Decimal principal is rounded to nearest integer
+
+5. **Total calculations**
+   - `calculateTotalInterest` returns sum of all interest values
+   - `calculateTotalPayment` returns sum of all totals (principal + interest)
+
+### Adding New Tests
+
+To add tests for other utility modules:
+
+1. Create a new file: `src/utils/[moduleName].test.js`
+2. Import the functions to test
+3. Use Jest's `describe` and `test` blocks
+4. Run `npm test` to verify
+
+Example:
+
+```javascript
+import { formatINR } from "./format";
+
+describe("formatINR", () => {
+  test("formats large numbers in Indian system", () => {
+    expect(formatINR(100000)).toBe("₹1,00,000.00");
+  });
+});
+```
+
+---
+
+## 17. Future Enhancements & Roadmap
 
 ### Logical Next Features
 
@@ -1132,7 +1319,7 @@ If a backend is added in the future:
 
 ---
 
-## 17. Contribution Guidelines
+## 18. Contribution Guidelines
 
 ### Code Style Expectations
 
@@ -1181,8 +1368,10 @@ If a backend is added in the future:
    Update `AppRouter.js` with new route.
 
 4. **Testing Changes**
-   - Run `npm start` and test all flows
-   - Test on mobile viewport
+   - Run `npm test` to execute all unit tests
+   - Run `npm start` and test all flows manually
+   - Test on mobile viewport (320px–639px)
+   - Test on tablet/desktop viewports
    - Verify PDF export still works
    - Check console for errors
 
@@ -1192,13 +1381,14 @@ If a backend is added in the future:
 - Layout components go in `components/Layout/`
 - Domain-specific components go in `components/[DomainName]/`
 - Pure functions go in `utils/`
+- Test files go adjacent to the module they test (e.g., `utils/loanSchedule.test.js`)
 - Page components go in `pages/[PageName]/`
 - Never put CSS in JS files
 - Never put business logic in components
 
 ---
 
-## 18. Known Limitations
+## 19. Known Limitations
 
 ### Intentional Constraints
 
@@ -1210,6 +1400,7 @@ If a backend is added in the future:
 | Monthly interest only     | Keeps calculations simple               |
 | INR currency only         | Target audience is Indian users         |
 | No annual rate conversion | Avoids confusion, expects monthly input |
+| Whole-rupee rounding only | Matches Mohila Samiti conventions       |
 
 ### What the App Does NOT Support
 
@@ -1223,10 +1414,11 @@ If a backend is added in the future:
 8. **Negative amortization** (interest capitalization)
 9. **Backend integration** (purely client-side)
 10. **Offline PWA mode** (requires network for initial load)
+11. **Paise-level precision** (all amounts are whole rupees)
 
 ---
 
-## 19. License & Usage Notes
+## 20. License & Usage Notes
 
 ### License
 
@@ -1236,7 +1428,7 @@ This project is provided as-is for educational and professional use. No specific
 
 1. **Accuracy Disclaimer**: This calculator is for estimation purposes. Official loan documents from financial institutions should be used for legally binding calculations.
 
-2. **Rounding**: Two-decimal precision is used throughout. Minor discrepancies with bank calculations may occur due to different rounding methods.
+2. **Rounding**: Whole-rupee ceiling rounding is used for EMI and interest values. All amounts are in whole rupees without paise. Minor discrepancies with bank calculations may occur due to different rounding methods (banks may use paise-level precision or different rounding rules).
 
 3. **Browser Support**: Tested on modern browsers (Chrome 90+, Firefox 88+, Safari 14+, Edge 90+). Internet Explorer is not supported.
 
@@ -1251,13 +1443,15 @@ This project is provided as-is for educational and professional use. No specific
 | Property         | Value                          |
 | ---------------- | ------------------------------ |
 | Application Name | SamitiHisab                    |
-| Version          | 1.1.0                          |
+| Version          | 1.2.0                          |
 | Framework        | React 18                       |
 | Build Tool       | Create React App               |
 | Primary Language | JavaScript (ES6+)              |
 | Styling          | Raw CSS with custom properties |
-| Last Updated     | 31st January 2026              |
+| Last Updated     | 3rd February 2026              |
 
 ```
+
+---
 
 ```

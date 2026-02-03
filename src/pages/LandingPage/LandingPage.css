@@ -66,6 +66,21 @@
   color: var(--color-primary);
 }
 
+/* Primary button overrides for blue gradient backgrounds */
+.hero__actions .btn--primary,
+.landing__cta .btn--primary {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.hero__actions .btn--primary:hover:not(:disabled),
+.landing__cta .btn--primary:hover:not(:disabled) {
+  background-color: var(--color-gray-100);
+  color: var(--color-primary-hover);
+  box-shadow: var(--shadow-lg);
+}
+
 .hero__stats {
   display: flex;
   flex-wrap: wrap;
